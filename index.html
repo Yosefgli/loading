@@ -26,44 +26,49 @@
             params[key] = value;
         });
 
-        fetch(webhookUrl, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify(params)
-        })
-        .then(response => {
-            // התגובה הראשונה - סטטוס 200
-            if (response.status === 200) {
-                document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
-                
-                // מקבל את הסטרים של התגובה
-                const reader = response.body.getReader();
-                return reader.read().then(function processResult(result) {
-                    if (result.done) return;
-                    
-                    // מנסה לפרסר את התגובה כ-JSON
-                    try {
-                        const text = new TextDecoder().decode(result.value);
-                        const data = JSON.parse(text);
-                        if (data.redirect_url) {
-                            window.location.href = data.redirect_url;
-                            return;
-                        }
-                    } catch (e) {
-                        // ממשיך לקרוא אם הפרסור נכשל
-                    }
-                    
-                    // ממשיך לקרוא מהסטרים
-                    return reader.read().then(processResult);
+        async function processRequest() {
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 30000);
+
+            try {
+                const response = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify(params),
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
+
+                if (response.status === 200) {
+                    document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
+
+                    const timeoutPromise = new Promise((_, reject) => {
+                        setTimeout(() => reject(new Error('Timeout waiting for second response')), 10000);
+                    });
+
+                    try {
+                        const secondResponse = await Promise.race([response.json(), timeoutPromise]);
+                        if (secondResponse.redirect_url) {
+                            window.location.href = secondResponse.redirect_url;
+                        }
+                    } catch (err) {
+                        console.error('Error waiting for second response:', err);
+                        document.getElementById('message').textContent = 'שגיאה בתגובה השנייה, אנא נסה שנית';
+                    }
+                } else {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+            } catch (err) {
+                console.error('Webhook error:', err);
+                document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
             }
-        })
-        .catch(error => {
-            document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
-            console.error('Error:', error);
-        });
+        }
+
+        window.onload = processRequest;
     </script>
 </body>
 </html>
