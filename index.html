@@ -25,17 +25,22 @@
             return params.get(name);
         }
 
-        // קבלת ה-Webhook מהפרמטר URL
+        // מקבל את כתובת ה-Webhook מהפרמטר URL
         const webhookUrl = getQueryParam("url");
 
         if (!webhookUrl) {
             alert("שגיאה: לא סופקה כתובת Webhook.");
         } else {
-            fetch(webhookUrl) // שליחת הבקשה ל-Webhook
-                .then(response => response.json())
+            fetch(webhookUrl, { method: "GET" }) // או "POST" אם צריך
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error("שגיאה בתגובה מהשרת");
+                    }
+                    return response.json();
+                })
                 .then(data => {
                     if (data.redirect_url) {
-                        window.location.href = data.redirect_url; // הפניה לכתובת שהתקבלה
+                        window.location.href = data.redirect_url; // מפנה לכתובת שהתקבלה
                     } else {
                         alert("שגיאה: לא התקבלה כתובת הפניה");
                     }
