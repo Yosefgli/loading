@@ -34,17 +34,30 @@
             body: JSON.stringify(params)
         })
         .then(response => {
+            // התגובה הראשונה - סטטוס 200
             if (response.status === 200) {
                 document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
-                return response.blob(); // ממשיך לקרוא את הסטרים
-            }
-        })
-        .then(data => {
-            if (data) {
-                const jsonData = JSON.parse(data);
-                if (jsonData.redirect_url) {
-                    window.location.href = jsonData.redirect_url;
-                }
+                
+                // מקבל את הסטרים של התגובה
+                const reader = response.body.getReader();
+                return reader.read().then(function processResult(result) {
+                    if (result.done) return;
+                    
+                    // מנסה לפרסר את התגובה כ-JSON
+                    try {
+                        const text = new TextDecoder().decode(result.value);
+                        const data = JSON.parse(text);
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                            return;
+                        }
+                    } catch (e) {
+                        // ממשיך לקרוא אם הפרסור נכשל
+                    }
+                    
+                    // ממשיך לקרוא מהסטרים
+                    return reader.read().then(processResult);
+                });
             }
         })
         .catch(error => {
