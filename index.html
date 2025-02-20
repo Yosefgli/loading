@@ -18,11 +18,9 @@
     <div id="message"></div>
 
     <script>
-        // מקבל את כל הפרמטרים מה-URL
         const urlParams = new URLSearchParams(window.location.search);
         const webhookUrl = urlParams.get('url');
         
-        // בונה אובייקט עם כל הפרמטרים
         const params = {};
         urlParams.forEach((value, key) => {
             params[key] = value;
@@ -30,7 +28,7 @@
 
         async function processRequest() {
             try {
-                // שליחת הבקשה הראשונה לוובהוק
+                // שליחת בקשה ראשונה וקבלת Accepted
                 const firstResponse = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: {
@@ -39,27 +37,38 @@
                     body: JSON.stringify(params)
                 });
 
-                // בדיקה אם התקבל סטטוס 200
                 if (firstResponse.status === 200) {
                     document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
-
-                    // ממתין לתגובה השנייה
-                    const secondResponse = await fetch(webhookUrl);
                     
-                    if (secondResponse.ok) {  // מקבל גם 204 וגם תוכן
-                        try {
-                            const data = await secondResponse.text();  // קורא את התוכן כטקסט
-                            if (data) {  // אם יש תוכן
-                                const jsonData = JSON.parse(data);
-                                if (jsonData.redirect_url) {
-                                    window.location.href = jsonData.redirect_url;
-                                    return;
+                    // פונקציה שמנסה לקבל את ה-redirect באופן חוזר
+                    async function checkRedirect() {
+                        const redirectResponse = await fetch(webhookUrl);
+                        
+                        if (redirectResponse.status === 204) {
+                            const responseText = await redirectResponse.text();
+                            try {
+                                // נסיון לפרסר כ-JSON רק אם זה לא טקסט רגיל
+                                if (responseText && !responseText.includes("Accepted")) {
+                                    const jsonData = JSON.parse(responseText);
+                                    if (jsonData.redirect_url) {
+                                        window.location.href = jsonData.redirect_url;
+                                        return;
+                                    }
                                 }
+                                // אם לא הצלחנו לקבל redirect, ננסה שוב אחרי שנייה
+                                setTimeout(checkRedirect, 1000);
+                            } catch (e) {
+                                // אם נכשל הפרסור, ננסה שוב
+                                setTimeout(checkRedirect, 1000);
                             }
-                        } catch (e) {
-                            console.error('Error parsing JSON:', e);
+                        } else {
+                            // אם לא קיבלנו 204, ננסה שוב
+                            setTimeout(checkRedirect, 1000);
                         }
                     }
+
+                    // התחלת הבדיקות החוזרות
+                    checkRedirect();
                 }
             } catch (error) {
                 document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
@@ -67,7 +76,6 @@
             }
         }
 
-        // הפעלת הפונקציה כשהדף נטען
         window.onload = processRequest;
     </script>
 </body>
