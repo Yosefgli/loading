@@ -26,31 +26,31 @@
             params[key] = value;
         });
 
-        async function processRequest() {
-            try {
-                // שולח בקשה אחת ומחכה לשתי תגובות
-                const response = await fetch(webhookUrl, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(params)
-                });
-
-                // כשמגיעה תגובת 200
-                if (response.status === 200) {
-                    document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
-                    
-                    // הוובהוק ישלח תגובה נוספת של 204 עם ה-JSON
-                    // הקוד ימשיך לרוץ כשהתגובה תגיע
-                }
-            } catch (error) {
-                document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
-                console.error('Error:', error);
+        fetch(webhookUrl, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(params)
+        })
+        .then(response => {
+            if (response.status === 200) {
+                document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
+                return response.blob(); // ממשיך לקרוא את הסטרים
             }
-        }
-
-        window.onload = processRequest;
+        })
+        .then(data => {
+            if (data) {
+                const jsonData = JSON.parse(data);
+                if (jsonData.redirect_url) {
+                    window.location.href = jsonData.redirect_url;
+                }
+            }
+        })
+        .catch(error => {
+            document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
+            console.error('Error:', error);
+        });
     </script>
 </body>
 </html>
