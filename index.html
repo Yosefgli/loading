@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="he">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>טוען...</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f8f9fa;
+            font-family: Arial, sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h2>מעבד בקשה... אנא המתן</h2>
+
+    <script>
+        // פונקציה לקבלת פרמטרים מה-URL
+        function getQueryParam(name) {
+            const params = new URLSearchParams(window.location.search);
+            return params.get(name);
+        }
+
+        // קבלת ה-Webhook מהפרמטר URL
+        const webhookUrl = getQueryParam("url");
+
+        if (!webhookUrl) {
+            alert("שגיאה: לא סופקה כתובת Webhook.");
+        } else {
+            fetch(webhookUrl) // שליחת הבקשה ל-Webhook
+                .then(response => response.json())
+                .then(data => {
+                    if (data.redirect_url) {
+                        window.location.href = data.redirect_url; // הפניה לכתובת שהתקבלה
+                    } else {
+                        alert("שגיאה: לא התקבלה כתובת הפניה");
+                    }
+                })
+                .catch(error => {
+                    console.error("שגיאה:", error);
+                    alert("אירעה שגיאה, נסה שוב מאוחר יותר.");
+                });
+        }
+    </script>
+</body>
+</html>
