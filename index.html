@@ -46,13 +46,18 @@
                     // ממתין לתגובה השנייה
                     const secondResponse = await fetch(webhookUrl);
                     
-                    // בדיקה אם התקבל סטטוס 204
-                    if (secondResponse.status === 204) {
-                        const data = await secondResponse.json();
-                        
-                        // הפניה לכתובת החדשה
-                        if (data.redirect_url) {
-                            window.location.href = data.redirect_url;
+                    if (secondResponse.ok) {  // מקבל גם 204 וגם תוכן
+                        try {
+                            const data = await secondResponse.text();  // קורא את התוכן כטקסט
+                            if (data) {  // אם יש תוכן
+                                const jsonData = JSON.parse(data);
+                                if (jsonData.redirect_url) {
+                                    window.location.href = jsonData.redirect_url;
+                                    return;
+                                }
+                            }
+                        } catch (e) {
+                            console.error('Error parsing JSON:', e);
                         }
                     }
                 }
