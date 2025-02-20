@@ -1,55 +1,69 @@
 <!DOCTYPE html>
-<html lang="he">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>טוען...</title>
+    <title>מעבד בקשה</title>
     <style>
         body {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            height: 100vh;
-            background-color: #f8f9fa;
+            text-align: center;
             font-family: Arial, sans-serif;
+            margin-top: 50px;
+        }
+        #message {
+            font-size: 24px;
         }
     </style>
 </head>
 <body>
-    <h2>מעבד בקשה... אנא המתן</h2>
+    <div id="message"></div>
 
     <script>
-        // פונקציה לקבלת פרמטרים מה-URL
-        function getQueryParam(name) {
-            const params = new URLSearchParams(window.location.search);
-            return params.get(name);
-        }
+        // מקבל את כל הפרמטרים מה-URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const webhookUrl = urlParams.get('url');
+        
+        // בונה אובייקט עם כל הפרמטרים
+        const params = {};
+        urlParams.forEach((value, key) => {
+            params[key] = value;
+        });
 
-        // מקבל את כתובת ה-Webhook מהפרמטר URL
-        const webhookUrl = getQueryParam("url");
-
-        if (!webhookUrl) {
-            alert("שגיאה: לא סופקה כתובת Webhook.");
-        } else {
-            fetch(webhookUrl, { method: "GET" }) // או "POST" אם צריך
-                .then(response => {
-                    if (!response.ok) {
-                        throw new Error("שגיאה בתגובה מהשרת");
-                    }
-                    return response.json();
-                })
-                .then(data => {
-                    if (data.redirect_url) {
-                        window.location.href = data.redirect_url; // מפנה לכתובת שהתקבלה
-                    } else {
-                        alert("שגיאה: לא התקבלה כתובת הפניה");
-                    }
-                })
-                .catch(error => {
-                    console.error("שגיאה:", error);
-                    alert("אירעה שגיאה, נסה שוב מאוחר יותר.");
+        async function processRequest() {
+            try {
+                // שליחת הבקשה הראשונה לוובהוק
+                const firstResponse = await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(params)
                 });
+
+                // בדיקה אם התקבל סטטוס 200
+                if (firstResponse.status === 200) {
+                    document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
+
+                    // ממתין לתגובה השנייה
+                    const secondResponse = await fetch(webhookUrl);
+                    
+                    // בדיקה אם התקבל סטטוס 204
+                    if (secondResponse.status === 204) {
+                        const data = await secondResponse.json();
+                        
+                        // הפניה לכתובת החדשה
+                        if (data.redirect_url) {
+                            window.location.href = data.redirect_url;
+                        }
+                    }
+                }
+            } catch (error) {
+                document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
+                console.error('Error:', error);
+            }
         }
+
+        // הפעלת הפונקציה כשהדף נטען
+        window.onload = processRequest;
     </script>
 </body>
 </html>
