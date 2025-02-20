@@ -28,8 +28,8 @@
 
         async function processRequest() {
             try {
-                // שליחת בקשה ראשונה וקבלת Accepted
-                const firstResponse = await fetch(webhookUrl, {
+                // שולח בקשה אחת ומחכה לשתי תגובות
+                const response = await fetch(webhookUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -37,38 +37,12 @@
                     body: JSON.stringify(params)
                 });
 
-                if (firstResponse.status === 200) {
+                // כשמגיעה תגובת 200
+                if (response.status === 200) {
                     document.getElementById('message').textContent = 'מעבד בקשה... אנא המתן';
                     
-                    // פונקציה שמנסה לקבל את ה-redirect באופן חוזר
-                    async function checkRedirect() {
-                        const redirectResponse = await fetch(webhookUrl);
-                        
-                        if (redirectResponse.status === 204) {
-                            const responseText = await redirectResponse.text();
-                            try {
-                                // נסיון לפרסר כ-JSON רק אם זה לא טקסט רגיל
-                                if (responseText && !responseText.includes("Accepted")) {
-                                    const jsonData = JSON.parse(responseText);
-                                    if (jsonData.redirect_url) {
-                                        window.location.href = jsonData.redirect_url;
-                                        return;
-                                    }
-                                }
-                                // אם לא הצלחנו לקבל redirect, ננסה שוב אחרי שנייה
-                                setTimeout(checkRedirect, 1000);
-                            } catch (e) {
-                                // אם נכשל הפרסור, ננסה שוב
-                                setTimeout(checkRedirect, 1000);
-                            }
-                        } else {
-                            // אם לא קיבלנו 204, ננסה שוב
-                            setTimeout(checkRedirect, 1000);
-                        }
-                    }
-
-                    // התחלת הבדיקות החוזרות
-                    checkRedirect();
+                    // הוובהוק ישלח תגובה נוספת של 204 עם ה-JSON
+                    // הקוד ימשיך לרוץ כשהתגובה תגיע
                 }
             } catch (error) {
                 document.getElementById('message').textContent = 'אירעה שגיאה בעיבוד הבקשה';
